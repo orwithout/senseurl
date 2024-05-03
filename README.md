@@ -39,7 +39,7 @@ git --version
 ```bash
 git clone https://github.com/orwithout/senseurl.git
 # 使用Vite初始化名为`senseurl`的vanilla项目方法（仅供参考）：
-# npm create vite@latest senseurl --template vanilla
+# npm create vite@latest senseurl -- --template vanilla
 ```
 
 
