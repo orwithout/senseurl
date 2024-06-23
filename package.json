@@ -16,6 +16,7 @@
     "vite": "^5.2.0"
   },
   "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^9.0.0",
     "@chainsafe/libp2p-gossipsub": "^13.0.0",
     "@chainsafe/libp2p-noise": "^15.0.0",
     "@chainsafe/libp2p-yamux": "^6.0.2",
@@ -43,6 +44,7 @@
     "glob": "^10.3.12",
     "handlebars": "^4.7.8",
     "helia": "^4.2.1",
+    "json-schema-ref-parser-sync": "^1.0.0",
     "lit": "^3.1.2",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
@@ -51,7 +53,7 @@
     "pouchdb-adapter-idb": "^8.0.1",
     "pouchdb-core": "^8.0.1",
     "regenerator-runtime": "^0.14.1",
-    "rxdb": "^15.19.0",
+    "rxdb": "^15.24.0",
     "rxjs": "^7.8.1",
     "simple-peer": "^9.11.1",
     "yup": "^1.4.0"

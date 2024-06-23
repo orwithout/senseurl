@@ -9,9 +9,15 @@ const preprocessors = {
 };
 
 class AjvValidator {
-  constructor(schema) {
-    this.ajv = new Ajv({ allErrors: true, useDefaults: true, coerceTypes: 'true' });
+  constructor(schema, definitions) {
+    this.ajv = new Ajv({ allErrors: true, useDefaults: true, coerceTypes: true,  allowUnionTypes: true});
     addFormats(this.ajv);
+    
+    if (definitions) {
+      Object.keys(definitions).forEach(key => {
+        this.ajv.addSchema(definitions[key], `#/$defs/${key}`);
+      });
+    }
 
     this.ajv.addKeyword({
       keyword: "preprocess",
@@ -48,9 +54,32 @@ class AjvValidator {
   }
 
   validateField(fieldPath, fieldValue) {
-    const validator = _.get(this.fieldValidators, fieldPath) || this.ajv.compile({ type: "object", properties: { [fieldPath]: _.get(this.schema.properties, fieldPath) }, required: [fieldPath] });
-    const valid = validator({ [fieldPath]: fieldValue });
-    return { valid, errors: validator.errors, fieldValue: fieldValue };
+    const pathParts = fieldPath.split('.');
+    let currentSchema = this.schema.properties;
+    let currentPath = '';
+
+    // 遍历嵌套路径
+    for (let i = 0; i < pathParts.length; i++) {
+      currentPath += (currentPath ? '.' : '') + pathParts[i];
+      if (currentSchema[pathParts[i]]) {
+        if (i === pathParts.length - 1) {
+          // 最后一个部分，执行验证
+          const fieldSchema = { type: "object", properties: { [pathParts[i]]: currentSchema[pathParts[i]] }, required: [pathParts[i]] };
+          const validator = this.ajv.compile(fieldSchema);
+          const valid = validator({ [pathParts[i]]: fieldValue });
+          return { valid, errors: validator.errors, fieldValue: fieldValue };
+        } else if (currentSchema[pathParts[i]].properties) {
+          // 继续遍历嵌套对象
+          currentSchema = currentSchema[pathParts[i]].properties;
+        } else {
+          // 路径无效
+          return { valid: false, errors: [{ message: `Invalid field path: ${fieldPath}` }], fieldValue: fieldValue };
+        }
+      } else {
+        // 字段不存在
+        return { valid: false, errors: [{ message: `Field not found: ${fieldPath}` }], fieldValue: fieldValue };
+      }
+    }
   }
   
 }
