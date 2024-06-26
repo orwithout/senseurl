@@ -1,14 +1,12 @@
-// src\apis\rxdb\doc_indexes.js
+// src\apis\rxdb\doc_store.js
 import getRxdbCollection from './base_rxdb.js';
 import AjvValidator from './base_ajv.js';
-import _ from 'lodash';
-
 
 
 // JSON Schema definition
-const doc_indexes_schema = {
-  title: "senseurl.x document indexes schema",
-  version: 0,
+const docSchema = {
+  title: "senseurl.x document store schema",
+  version: 1,
   primaryKey: 'localId',
   type: 'object',
   properties: {
@@ -64,49 +62,44 @@ const doc_indexes_schema = {
 
 
 const migrationStrategies = {
-  // 1: (oldDoc) => {
-  //   // 添加新字段
-  //   oldDoc.createdAt = new Date().toISOString();
+  1: (oldDoc) => {
+    // // 添加新字段
+    // oldDoc.createdAt = new Date().toISOString();
     
-  //   // 修改字段名
-  //   oldDoc.userName = oldDoc.name;
-  //   delete oldDoc.name;
+    // // 修改字段名
+    // oldDoc.userName = oldDoc.name;
+    // delete oldDoc.name;
     
-  //   // 修改字段类型
-  //   oldDoc.age = parseInt(oldDoc.age, 10);
+    // // 修改字段类型
+    // oldDoc.age = parseInt(oldDoc.age, 10);
     
-  //   // 删除不再需要的字段
-  //   delete oldDoc.temporaryField;
+    // // 删除不再需要的字段
+    // delete oldDoc.temporaryField;
     
-  //   // 处理嵌套数据
-  //   if (oldDoc.address) {
-  //     oldDoc.formattedAddress = `${oldDoc.address.street}, ${oldDoc.address.city}`;
-  //   }
+    // // 处理嵌套数据
+    // if (oldDoc.address) {
+    //   oldDoc.formattedAddress = `${oldDoc.address.street}, ${oldDoc.address.city}`;
+    // }
     
-  //   return oldDoc;
-  // }
+    return oldDoc;
+  }
 };
 
 
-
-
-// 单例模式导出验证方法
-const { version, primaryKey, indexes, ...ajvSchema } = doc_indexes_schema;  // 去掉 version 和 primaryKey
-const docValidator = new AjvValidator(ajvSchema);
-const validateData = docValidator.validateData.bind(docValidator);
-const validateField = docValidator.validateField.bind(docValidator);  // 绑定 validateField 方法
-
-
-let schemaWithoutRequired = _.cloneDeep(ajvSchema);
-delete schemaWithoutRequired.required;
-const docValidatorWithoutRequired = new AjvValidator(schemaWithoutRequired);
-const validateDataWithoutRequired = docValidatorWithoutRequired.validateData.bind(docValidatorWithoutRequired);
-
-
 // 直接获取 RxDB 集合实例
-async function getRxdbCollectionInstance() {
-    return await getRxdbCollection('doc_indexes', doc_indexes_schema, migrationStrategies);
+async function getCollection() {
+  return await getRxdbCollection('full_docs', docSchema, migrationStrategies);
 }
 
-// 导出 validateData 和 validateField 方法
-export { getRxdbCollectionInstance, validateData, validateField, validateDataWithoutRequired, doc_indexes_schema };
+
+// 解构 docSchema，提取所需字段
+const { version, primaryKey, indexes, required, ...ajvSchema } = docSchema;
+const baseValidator = new AjvValidator(ajvSchema);
+const validate = (data) => baseValidator.validateData({ ...ajvSchema, required }, data);
+const validateWithoutRequired = (data) => baseValidator.validateData(ajvSchema, data);
+const validateField = baseValidator.validateField.bind(baseValidator);
+
+
+
+// 导出 validateData 和 validateField 方法, 使用没有特色的名称, 以便统一风格的动态调用
+export { getCollection, validate, validateWithoutRequired, validateField, docSchema };

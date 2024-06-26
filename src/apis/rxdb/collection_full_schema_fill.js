@@ -1,4 +1,4 @@
-// src\apis\rxdb\doc_indexes_schema_fill.js
+// src\apis\rxdb\doc_store_schema_fill.js
 class DocIndexesFill {
     static id() {
       return 'id-' + Math.random().toString(36).slice(2, 11);

@@ -22,9 +22,13 @@ export default defineConfig({
   build: {
     rollupOptions: {input}
   },
-
+  optimizeDeps: {
+    include: ['jquery', 'jstree']
+  },
   plugins: [
     jsmakeExecutor({ moduleDir: './vite' }),
   ],
 
 });
+
+

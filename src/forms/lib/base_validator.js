@@ -45,8 +45,8 @@ class BaseValidator extends LitElement {
     this.initPromise = this.loadModule();
   }
   async loadModule() {
-    const module = await import('/src/apis/rxdb/doc_stores.js');
-    this.dbModule = await module.getRxdbDocStores(this.store);
+    const module = await import('/src/apis/rxdb/docs_easy_io.js');
+    this.dbModule = await module.getDocsEasyIo(this.store);
     await this.dbModule.init();
   }
 
