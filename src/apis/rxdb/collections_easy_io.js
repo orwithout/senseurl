@@ -1,8 +1,8 @@
-// src\apis\rxdb\docs_easy_io.js
+// src\apis\rxdb\collections_easy_io.js
 import _ from 'lodash';
 
 class DocsEasyIo {
-  constructor(moduleName = 'doc_store') {
+  constructor(moduleName = 'collection_full') {
     this.moduleName = moduleName;
     this.subscriptions = new WeakMap();
     this.debouncedUnsubscribe = _.debounce(this.unsubscribe.bind(this), 30000);
@@ -10,13 +10,13 @@ class DocsEasyIo {
 
   async init() {
     const modules = import.meta.glob('./collection_*.js');
-    const {getCollection, validateData, validateField, validateWithoutRequired, docSchema} = await modules[`./${this.moduleName}.js`]();
-    Object.assign(this, {validateData, validateField, validateWithoutRequired, docSchema });
+    const {getCollection, validateFull, validateField, validatePartial, docSchema} = await modules[`./${this.moduleName}.js`]();
+    Object.assign(this, {validateFull, validateField, validatePartial, docSchema });
     this.collection = await getCollection();
   }
   
   async add(docData) {
-    const validationResult = await this.validateData(docData);
+    const validationResult = await this.validateFull(docData);
     if (!validationResult.valid) {
       console.error('Validation failed:', validationResult.errors);
       throw new Error('Validation failed');
@@ -95,6 +95,53 @@ class DocsEasyIo {
     this.subscriptions.forEach((_, key) => this.unsubscribe(key));
     console.log('所有订阅已取消');
   }
+
+  async getJsTreeNodes(parentPath = '/') {
+    console.log('Getting nodes for path:', parentPath);
+    const query = parentPath === '/' 
+      ? { id: { $regex: '^/[^/]+' } }
+      : { id: { $regex: `^${this.escapeRegExp(parentPath)}/[^/]+$` } };
+  
+    const docs = await this.collection.find({
+      selector: query
+    }).exec();
+    console.log('Found docs:', docs.length);
+  
+    const nodes = docs.map(doc => ({
+      id: doc.id,
+      text: doc.doc.name,
+      icon: doc.doc.type === 'folder' ? 'jstree-folder' : 'jstree-file',
+      state: {
+        opened: true,
+        disabled: false,
+        selected: false
+      },
+      type: doc.doc.type,
+      data: {
+        content: doc.doc.content,
+        size: doc.doc.size,
+        published: doc.doc.published
+      }
+    }));
+  
+    // 创建父节点（如果不存在）
+    const uniquePaths = new Set(nodes.map(node => {
+      const parts = node.id.split('/').slice(0, -1);
+      return parts.map((_, index) => parts.slice(0, index + 1).join('/')).slice(1);
+    }).flat());
+  
+    const parentNodes = Array.from(uniquePaths).map(path => ({
+      id: path,
+      text: path.split('/').pop(),
+      icon: 'jstree-folder',
+      state: { opened: true },
+      type: 'folder',
+      children: []
+    }));
+  
+    return [...parentNodes, ...nodes];
+  }
+
 }
 
 const instances = {};
@@ -108,3 +155,7 @@ export async function getDocsEasyIo(moduleName) {
 }
 
 export default getDocsEasyIo;
+// Usage（使用方法）:
+// import { getDocsEasyIo } from './collections_easy_io.js';
+// const docsEasyIo = await getDocsEasyIo('collection_full');
+// await docsEasyIo.add(sampleDoc);

@@ -1,4 +1,4 @@
-<!-- src\apis\rxdb\doc_store.test.html -->
+<!-- src\apis\rxdb\collection_full.test.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +14,7 @@
   <div id="results"></div>
 
   <script type="module">
-    import { getCollection, validateData, validateField } from './collection_full.js';
+    import { getCollection, validateFull, validateField } from './collection_full.js';
 
     const fullStore = await getCollection();
 
@@ -42,18 +42,20 @@
       });
     };
 
+  function genRanStr(length) {
+      const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      let randomString = '';
+      for (let i = 0; i < length; i++) {
+          const randomIndex = Math.floor(Math.random() * base64Chars.length);
+          randomString += base64Chars[randomIndex];
+      }
+      return randomString;
+  }
     // Function to generate sample data
     function generateSampleData() {
       return {
-        localId: uuidv4(),
-        localPath: '/path/to/document',
-        localCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf4dfuylqabf3oclgtqy55fbzdi',
-        localVersions: [
-          {
-            cid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf4dfuylqabf3oclgtqy55fbzdi',
-            published: new Date().toISOString(),
-          },
-        ],
+        id: `#/path/${genRanStr(1)}/${genRanStr(4)}`,
+
         doc: {
           id: uuidv4(),
           type: 'text/plain',
@@ -85,7 +87,7 @@
     document.getElementById('validateData').addEventListener('click', async () => {
       const sampleData = generateSampleData();
       console.log('Validating data:', JSON.stringify(sampleData, null, 2));
-      const validationResult = validateData(sampleData);
+      const validationResult = validateFull(sampleData);
       if (!validationResult.valid) {
         console.error('Validation failed:', validationResult.errors);
         console.log('Validation Error! Check the console for more information.');

@@ -1,4 +1,4 @@
-// src\apis\rxdb\doc_store.js
+// src\apis\rxdb\collection_full.js
 import getRxdbCollection from './base_rxdb.js';
 import AjvValidator from './base_ajv.js';
 
@@ -7,17 +7,27 @@ import AjvValidator from './base_ajv.js';
 const docSchema = {
   title: "senseurl.x document store schema",
   version: 1,
-  primaryKey: 'localId',
+  primaryKey: 'id',
   type: 'object',
   properties: {
-    localId: {type: 'string',maxLength: 36, description: 'UUID v4'},
-    localPath: {type: 'string',maxLength: 4095},
-    localCid: {type: 'string',maxLength: 128},
-    localVersions: {type: 'array', maxItems: 4095, uniqueItems: true, items: {type: 'object', properties: {cid: { type: 'string', maxLength: 128 },published: {type: 'string',format: 'date-time',maxLength: 30}},required: ['cid','published']}},
+    id: {type: 'string',maxLength: 4095, description: 'file path'},
+    state: {type: 'object',properties: {opened: {type: 'boolean'},disabled: {type: 'boolean'},selected: {type: 'boolean'}}},
+    children: {anyOf: [{type: 'boolean'},{type: 'array', items: {type: 'object'}}],description: 'Preloaded children or flag for lazy loading'},
+    li_attr: {type: 'object', description: 'Attributes for li element'},
+    a_attr: {type: 'object', description: 'Attributes for a element'},
+    tooltip: {type: 'string', maxLength: 1000, description: 'Hover tooltip text'},
+    order: {type: 'number', description: 'Custom sort order'},
+    checkbox: {type: 'object', description: 'Checkbox plugin options'},
+    draggable: {type: 'boolean', description: 'Whether the node is draggable'},
+    tags: {type: 'array', items: {type: 'string'}, description: 'Additional tags or labels'},
+    custom_classes: {type: 'string', maxLength: 255, description: 'Custom CSS classes'},
+    // localId: {type: 'string',maxLength: 36},
+    // localCid: {type: 'string',maxLength: 128},
+    // localVersions: {type: 'array', maxItems: 4095, uniqueItems: true, items: {type: 'object', properties: {cid: { type: 'string', maxLength: 128 },published: {type: 'string',format: 'date-time',maxLength: 30}},required: ['cid','published']}},
     doc: {
       type: 'object', properties: {
         id: {type: 'string',maxLength: 36, description: 'UUID v4'},
-        type: {type: 'string', maxLength: 64,description: 'Event or MIME Type: Like, Create, text/bookmark, app/docx, link/docx, image/jpeg'},
+        type: {type: 'string', maxLength: 64,description: 'Event or MIME Type: Like, Create, folder, text/bookmark, app/docx, link/docx, image/jpeg'},
         cid: {type: 'string',maxLength: 128, description: 'IPFS cid'}, 
 
         name: {type: 'string',maxLength: 64},
@@ -56,8 +66,8 @@ const docSchema = {
       },required: ['id']
     }
   },
-  required: ['localId','localPath'],
-  indexes: ['localPath', 'localCid','doc.id','doc.type','doc.cid','doc.name','doc.actor','doc.profile','doc.size','doc.published','doc.updated','doc.accessed']
+  required: ['id'],
+  indexes: ['doc.id','doc.type','doc.cid','doc.name','doc.actor','doc.profile','doc.size','doc.published','doc.updated','doc.accessed']
 };
 
 
@@ -95,11 +105,11 @@ async function getCollection() {
 // 解构 docSchema，提取所需字段
 const { version, primaryKey, indexes, required, ...ajvSchema } = docSchema;
 const baseValidator = new AjvValidator(ajvSchema);
-const validate = (data) => baseValidator.validateData({ ...ajvSchema, required }, data);
-const validateWithoutRequired = (data) => baseValidator.validateData(ajvSchema, data);
+const validateFull = (data) => baseValidator.validateData({ ...ajvSchema, required }, data);
+const validatePartial = (data) => baseValidator.validateData(ajvSchema, data);
 const validateField = baseValidator.validateField.bind(baseValidator);
 
 
 
-// 导出 validateData 和 validateField 方法, 使用没有特色的名称, 以便统一风格的动态调用
-export { getCollection, validate, validateWithoutRequired, validateField, docSchema };
+// 没有特色的名称, 以便统一风格的动态调用
+export { getCollection, validateFull, validatePartial, validateField, docSchema };

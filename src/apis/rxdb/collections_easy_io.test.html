@@ -1,4 +1,4 @@
-<!-- src\apis\rxdb\docs_easy_io.test.html -->
+<!-- src\apis\rxdb\collections_easy_io.test.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,10 +15,14 @@
   <label>⑤Find by Name</label> <input type="text" id="findByFieldInput" placeholder="Enter document Name"> <button id="findByFieldBtn">Find</button><pre id="findByFieldResult"></pre>
   <label>⑥Query Starts With Name</label> <input type="text" id="queryStartsWithName" placeholder="Enter start of Name"> <button id="queryStartsWithNameBtn">Query</button> <pre id="queryStartsWithNameRslt"></pre>
   <label>⑦Query Starts With Tags</label> <input type="text" id="queryStartsWithTags" placeholder="Enter start of Tags"> <button id="queryStartsWithTagsBtn">Query</button> <pre id="queryStartsWithTagsRslt"></pre>
-  <label>⑧Query Starts With Tag Name</label> <input type="text" id="queryStartsWithTagName" placeholder="Enter start of Tag Name"> <button id="queryStartsWithTagNameBtn">Query</button> <pre id="queryStartsWithTagNameRslt"></pre>
-
+  <label>⑧Query Starts With Tag Name</label> <input type="text" id="queryStartsWithTagName" placeholder="Enter start of Tag Name"> <button id="queryStartsWithTagNameBtn">Query</button> <pre id="queryStartsWithTagNameRslt"></pre> 
+  <label>⑨Subscribe to Changes</label><button id="subscribeBtn">Subscribe</button><button id="unsubscribeBtn" disabled>Unsubscribe</button><pre id="subscriptionResults"></pre>
+  
+  
   <script type="module">
-    import { getDocsEasyIo } from './docs_easy_io.js';
+    import { getDocsEasyIo } from './collections_easy_io.js';
+    import _ from 'lodash';
+
     const docsEasyIo = await getDocsEasyIo('collection_full');
 
     function uuidv4() {
@@ -28,18 +32,18 @@
         return v.toString(16);
       });
     }
-
+    function genRanStr(length) {
+      const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      let randomString = '';
+      for (let i = 0; i < length; i++) {
+          const randomIndex = Math.floor(Math.random() * base64Chars.length);
+          randomString += base64Chars[randomIndex];
+      }
+      return randomString;
+  }
     function generateSampleDoc() {
       return {
-        localId: uuidv4(),
-        localPath: '/path/to/document',
-        localCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf4dfuylqabf3oclgtqy55fbzdi',
-        localVersions: [
-          {
-            cid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf4dfuylqabf3oclgtqy55fbzdi',
-            published: new Date().toISOString(),
-          },
-        ],
+        id: `#/path/${genRanStr(1)}/${genRanStr(4)}`,
         doc: {
           id: uuidv4(),
           type: 'text/plain',
@@ -74,7 +78,7 @@
     // Validate entire document
     document.getElementById('validateDocBtn').addEventListener('click', async () => {
       const sampleDoc = generateSampleDoc();
-      const validationResult = await docsEasyIo.validateData(sampleDoc);
+      const validationResult = await docsEasyIo.validateFull(sampleDoc);
       console.log(`Document validation: ${validationResult.valid ? 'Success' : 'Failed'} - ${JSON.stringify(validationResult.errors)}`);
     });
 
@@ -155,6 +159,48 @@
         console.error('Error querying documents:', error);
         document.getElementById('queryStartsWithTagNameRslt').innerText = 'Error: ' + error.message;
       }
+    });
+
+
+
+
+    // 测试订阅 test subscription
+    let subscriptionKey = null;
+    function updateSubscriptionResults(results) {
+      const resultElement = document.getElementById('subscriptionResults');
+      const formattedResults = results.map(doc => 
+        `${doc.localId}: ${_.get(doc, 'doc.name', 'N/A')}`
+      ).join('\n');
+      
+      resultElement.textContent = formattedResults || 'No documents';
+    }
+
+    // Subscribe to changes
+    document.getElementById('subscribeBtn').addEventListener('click', () => {
+      subscriptionKey = docsEasyIo.subscribeToChanges({}, (results) => {
+        updateSubscriptionResults(results);
+        console.log('Subscription update:', results.length, 'documents');
+      });
+      document.getElementById('subscribeBtn').disabled = true;
+      document.getElementById('unsubscribeBtn').disabled = false;  // 修改：启用 Unsubscribe 按钮
+      console.log('Subscribed to changes');
+    });
+
+    // Unsubscribe from changes
+    document.getElementById('unsubscribeBtn').addEventListener('click', () => {
+      if (subscriptionKey) {
+        docsEasyIo.unsubscribe(subscriptionKey);
+        subscriptionKey = null;
+        document.getElementById('subscribeBtn').disabled = false;
+        document.getElementById('unsubscribeBtn').disabled = true;
+        document.getElementById('subscriptionResults').textContent = 'Unsubscribed';
+        console.log('Unsubscribed from changes');
+      }
+    });
+
+    // 在页面关闭时取消所有订阅
+    window.addEventListener('beforeunload', () => {
+      docsEasyIo.unsubscribeAll();
     });
 
   </script>
