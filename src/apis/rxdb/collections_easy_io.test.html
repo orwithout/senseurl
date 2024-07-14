@@ -33,7 +33,7 @@
       });
     }
     function genRanStr(length) {
-      const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      const base64Chars = '#ab/';
       let randomString = '';
       for (let i = 0; i < length; i++) {
           const randomIndex = Math.floor(Math.random() * base64Chars.length);
@@ -43,13 +43,15 @@
   }
     function generateSampleDoc() {
       return {
-        id: `#/path/${genRanStr(1)}/${genRanStr(4)}`,
+        id: uuidv4(),
+        path: `${genRanStr(3)}`,
         doc: {
           id: uuidv4(),
           type: 'text/plain',
           cid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf4dfuylqabf3oclgtqy55fbzdi',
           name: `Example Document ${new Date().toISOString()}`,
           actor: 'did:example:123456789abcdefghi',
+          icon: 'asdf,sdfe,asdfe,',
           profile: 'https://example.com/profile',
           published: new Date().toISOString(),
           updated: new Date().toISOString(),

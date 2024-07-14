@@ -1,16 +1,15 @@
-// src\apis\rxdb\collection_full.js
-import getRxdbCollection from './base_rxdb.js';
+// test\rxdb4\schema.js
+// import getRxdbCollection from './base_rxdb.js';
 import AjvValidator from './base_ajv.js';
 
 
 // JSON Schema definition
 const docSchema = {
-  title: "wjw.net schema",
+  title: "senseurl.x document store schema",
   version: 1,
   primaryKey: 'id',
   type: 'object',
   properties: {
-    uuid: {type: 'string',maxLength: 36, description: 'UUID v4'},
     id: {type: 'string',maxLength: 4095, description: 'file path'},
     parent: {type: 'string',maxLength: 4095, preprocess:'parent', description: 'parent file path'},
     state: {type: 'object',properties: {opened: {type: 'boolean'},disabled: {type: 'boolean'},selected: {type: 'boolean'}}},
@@ -21,6 +20,7 @@ const docSchema = {
     order: {type: 'number', description: 'Custom sort order'},
     checkbox: {type: 'object', description: 'Checkbox plugin options'},
     draggable: {type: 'boolean', description: 'Whether the node is draggable'},
+    tags: {type: 'array', items: {type: 'string'}, description: 'Additional tags or labels'},
     custom_classes: {type: 'string', maxLength: 255, description: 'Custom CSS classes'},
     // localId: {type: 'string',maxLength: 36},
     // localCid: {type: 'string',maxLength: 128},
@@ -32,7 +32,7 @@ const docSchema = {
         cid: {type: 'string',maxLength: 128, description: 'IPFS cid'}, 
 
         name: {type: 'string',maxLength: 64},
-        preferredUsername: {type: 'string',maxLength: 64},
+        preferredUsername: {type: 'string',maxLength: 64},   
         actor: {type: 'string',maxLength: 4095, description: 'like id'},
         attributedTo: {type: 'string',maxLength: 4095, description: 'like id'},
         profile: {type: 'string',maxLength: 4095, description: 'home page url'},
@@ -98,20 +98,20 @@ const migrationStrategies = {
 
 
 // 直接获取 RxDB 集合实例
-async function getCollection() {
-  return await getRxdbCollection('full_docs', docSchema, migrationStrategies);
-}
+// async function getCollection() {
+//   return await getRxdbCollection('full_docs', docSchema, migrationStrategies);
+// }
 
 
 // 解构 docSchema，提取所需字段
 const { version, primaryKey, indexes, required, ...ajvSchema } = docSchema;
-const fullValidator = new AjvValidator({...ajvSchema, required});
-const partialValidator = new AjvValidator(ajvSchema);
-const validateFull = (data) => fullValidator.validate(data);
-const validatePartial = (data) => partialValidator.validate(data);
-const validateField = partialValidator.validateField.bind(partialValidator);
+console.log('ajvSchema:', ajvSchema);
+const baseValidator = new AjvValidator(ajvSchema);
+const validateFull = (data) => baseValidator.validateData({ ...ajvSchema, required }, data);
+const validatePartial = (data) => baseValidator.validateData(ajvSchema, data);
+const validateField = baseValidator.validateField.bind(baseValidator);
 
 
 
 // 没有特色的名称, 以便统一风格的动态调用
-export { getCollection, validateFull, validatePartial, validateField, docSchema };
+export { validateFull, validatePartial, validateField, docSchema };

@@ -6,22 +6,54 @@ class DocsEasyIo {
     this.moduleName = moduleName;
     this.subscriptions = new WeakMap();
     this.debouncedUnsubscribe = _.debounce(this.unsubscribe.bind(this), 30000);
+    this.orphanFolderId = 'orphan_-_folder';
   }
 
   async init() {
     const modules = import.meta.glob('./collection_*.js');
-    const {getCollection, validateFull, validateField, validatePartial, docSchema} = await modules[`./${this.moduleName}.js`]();
-    Object.assign(this, {validateFull, validateField, validatePartial, docSchema });
+    const {getCollection, validateFull, validateField, validatePartial, docSchema,syncFromFullCollection} = await modules[`./${this.moduleName}.js`]();
+    Object.assign(this, {validateFull, validateField, validatePartial, docSchema,syncFromFullCollection});
     this.collection = await getCollection();
   }
   
+  getParentPath(id) {
+    const parts = id.split('/');
+    parts.pop(); // 移除最后一个部分
+    return parts.join('/') || '#'; // 如果是根节点，返回 '#'
+  }
   async add(docData) {
     const validationResult = await this.validateFull(docData);
     if (!validationResult.valid) {
       console.error('Validation failed:', validationResult.errors);
       throw new Error('Validation failed');
     }
+
+    // 计算 parent 字段并添加到 docData
+    // const parent = this.getParentPath(docData.id);
+    // const newDocData = { ...docData, parent };
+
     return this.collection.insert(docData);
+  }
+
+  async update(docId, updateData) {
+    const doc = await this.collection.findOne(docId).exec();
+    if (!doc) {
+      throw new Error(`Document not found: ${docId}`);
+    }
+
+    const newData = { ...doc.toJSON(), ...updateData };
+    const validationResult = await this.validateFull(newData);
+    if (!validationResult.valid) {
+      console.error('Validation failed:', validationResult.errors);
+      throw new Error('Validation failed');
+    }
+
+    // 如果 id 被更新，重新计算 parent 字段
+    if (updateData.id && updateData.id !== docId) {
+      newData.parent = this.getParentPath(updateData.id);
+    }
+
+    return this.collection.upsert(newData);
   }
 
   findById(id) {
@@ -96,51 +128,68 @@ class DocsEasyIo {
     console.log('所有订阅已取消');
   }
 
-  async getJsTreeNodes(parentPath = '/') {
-    console.log('Getting nodes for path:', parentPath);
-    const query = parentPath === '/' 
-      ? { id: { $regex: '^/[^/]+' } }
-      : { id: { $regex: `^${this.escapeRegExp(parentPath)}/[^/]+$` } };
-  
-    const docs = await this.collection.find({
-      selector: query
-    }).exec();
-    console.log('Found docs:', docs.length);
-  
-    const nodes = docs.map(doc => ({
-      id: doc.id,
-      text: doc.doc.name,
-      icon: doc.doc.type === 'folder' ? 'jstree-folder' : 'jstree-file',
-      state: {
-        opened: true,
-        disabled: false,
-        selected: false
-      },
-      type: doc.doc.type,
-      data: {
-        content: doc.doc.content,
-        size: doc.doc.size,
-        published: doc.doc.published
-      }
-    }));
-  
-    // 创建父节点（如果不存在）
-    const uniquePaths = new Set(nodes.map(node => {
-      const parts = node.id.split('/').slice(0, -1);
-      return parts.map((_, index) => parts.slice(0, index + 1).join('/')).slice(1);
-    }).flat());
-  
-    const parentNodes = Array.from(uniquePaths).map(path => ({
-      id: path,
-      text: path.split('/').pop(),
-      icon: 'jstree-folder',
-      state: { opened: true },
-      type: 'folder',
-      children: []
-    }));
-  
-    return [...parentNodes, ...nodes];
+
+  async findOrphanNodes() {
+    const allDocs = await this.collection.find().exec();
+    const allIds = new Set(allDocs.map(doc => doc.id));
+    return allDocs.filter(doc => 
+      doc.parent !== '#' && doc.parent !== '' && !allIds.has(doc.parent)
+    );
   }
+
+  async getJsTreeNodes(nodeId = '#') {
+    console.log('Getting nodes for:', nodeId);
+
+    let docs;
+    if (nodeId === '#') {
+      // 查询顶级节点和孤儿节点目录
+      const query = { parent: { $in: ['#', ''] } };
+      docs = await this.collection.find({ selector: query }).exec();
+      const orphans = await this.findOrphanNodes();
+      if (orphans.length > 0) {
+        docs.push({
+          id: this.orphanFolderId,
+          parent: '#',
+          doc: { name: '孤立的ORPHAN', type: 'folder' }
+        });
+      }
+    } else if (nodeId === this.orphanFolderId) {
+      // 如果是请求孤儿节点目录的内容
+      docs = await this.findOrphanNodes();
+    } else {
+      // 正常查询子节点
+      const query = { parent: nodeId };
+      docs = await this.collection.find({ selector: query }).exec();
+    }
+
+    console.log(`Found ${docs.length} nodes`);
+
+    // 转换为 jsTree 格式
+    const nodes = await Promise.all(docs.map(async doc => ({
+      id: doc.id,
+      text: doc.doc.name || doc.id,
+      icon: doc.doc.type === 'folder' ? 'jstree-folder' : 'jstree-file',
+      type: doc.doc.type,
+      children: await this.hasChildren(doc.id)
+    })));
+
+    console.log('Transformed nodes:', nodes);
+    return nodes;
+  }
+
+  async hasChildren(nodeId) {
+    if (nodeId === this.orphanFolderId) {
+      const orphans = await this.findOrphanNodes();
+      return orphans.length > 0;
+    }
+    const children = await this.collection.find({
+      selector: { parent: nodeId },
+      limit: 1
+    }).exec();
+    return children.length > 0;
+  }
+
+
 
 }
 

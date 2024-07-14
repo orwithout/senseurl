@@ -28,7 +28,7 @@
       }
       results.forEach(result => {
         const p = document.createElement('p');
-        p.textContent = `LocalID: ${result.localId}, DocID: ${result.doc.id}, Name: ${result.doc.name}, Content: ${result.doc.content.substring(0, 50)}...`;
+        p.textContent = `id: ${result.id}, parent: ${result.parent},doc.id: ${result.doc.id}, Name: ${result.doc.name}, Content: ${result.doc.content.substring(0, 50)}...`;
         resultDiv.appendChild(p);
       });
     };
@@ -43,7 +43,7 @@
     };
 
   function genRanStr(length) {
-      const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      const base64Chars = 'AC#/';
       let randomString = '';
       for (let i = 0; i < length; i++) {
           const randomIndex = Math.floor(Math.random() * base64Chars.length);
@@ -54,8 +54,8 @@
     // Function to generate sample data
     function generateSampleData() {
       return {
-        id: `#/path/${genRanStr(1)}/${genRanStr(4)}`,
-
+        id: "#/a/b",
+        parent: '',
         doc: {
           id: uuidv4(),
           type: 'text/plain',
@@ -66,6 +66,7 @@
           published: new Date().toISOString(),
           updated: new Date().toISOString(),
           accessed: new Date().toISOString(),
+          icon: "asdf,sdfe,asdfe",
           tags: [{tag:'example'}, {tag:'test'}, {tag:'document'}],
           size: 1024,
           content: `This is an example document for testing purposes. Generated at ${new Date().toISOString()}`,
@@ -99,19 +100,24 @@
     // 添加数据
     document.getElementById('addData').addEventListener('click', async () => {
       const sampleData = generateSampleData();
-      try {
-        console.log('Attempting to add data:', sampleData);
-        await fullStore.insert(sampleData);
-        console.log('Data added successfully:', sampleData);
+      const validationResult = validateFull(sampleData);
+      if (validationResult.valid) {
+        try {
+          console.log('Attempting to add data:', sampleData);
+          await fullStore.insert(sampleData);
+          console.log('Data added successfully:', sampleData);
 
-        // 立即查询并打印所有文档
-        const allDocs = await fullStore.find().exec();
-        console.log('All documents after insertion:', allDocs);
-        displayResults(allDocs);
-      } catch (error) {
-        console.error('Error adding data:', error);
-        console.error('Error details:', error.parameters);
-      }
+          // 立即查询并打印所有文档
+          const allDocs = await fullStore.find().exec();
+          console.log('All documents after insertion:', allDocs);
+          displayResults(allDocs);
+        } catch (error) {
+          console.error('Error adding data:', error);
+          console.error('Error details:', error.parameters);
+        }
+      } else {
+    console.error('Validation failed:', validationResult.errors);
+  }
     });
 
     // 搜索数据

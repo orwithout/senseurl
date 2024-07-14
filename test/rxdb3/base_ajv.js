@@ -34,6 +34,7 @@ class AjvValidator {
       modifying: true,
       schemaType: "string",
       compile: (preprocessKey,schema,parentSchema,dataPath,parentDataPath,rootData) => {
+        console.log(`Compiling preprocess for key: ${preprocessKey}`);
         const preprocessFunc = preprocessors[preprocessKey];
         return (dataValue, dataContext) => {
           console.log("Preprocessing data for key:",dataContext.parentDataProperty);

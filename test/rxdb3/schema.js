@@ -1,5 +1,5 @@
 // index\schema.js
-import Validator from './validator.js';
+import Validator from './base_ajv.js';
 
 
 const schema = {
