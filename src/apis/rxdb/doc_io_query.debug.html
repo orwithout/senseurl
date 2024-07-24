@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Query Script</title>
+</head>
+<body>
+    <h1>Debug Query Script</h1>
+    <button onclick="runDebugQueries()">Run Debug Queries</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { getMetaCollection } from './doc_meta.js';
+        import { docQueryStartsWith, docFindByField, docFindInRange } from './doc_io_query.js';
+
+        async function debugQueries() {
+            const output = [];
+            output.push('Starting debug queries...');
+
+            try {
+                const metaCollection = await getMetaCollection();
+
+                // Add a small delay to ensure database is fully loaded
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 1. Check if the document exists in the database
+                output.push('1. Checking if document exists...');
+                const allDocs = await metaCollection.find().exec();
+                output.push(`Total documents in collection: ${allDocs.length}`);
+                const targetDoc = allDocs.find(doc => doc.id === '9ada5030-92fc-40bc-a47a-4475d269e895');
+                output.push(`Target document found: ${targetDoc ? 'Yes' : 'No'}`);
+
+                // 2. Test docFindByField
+                output.push('\n2. Testing docFindByField...');
+                const findByIdResult = await docFindByField('id', '9ada5030-92fc-40bc-a47a-4475d269e895', 5);
+                output.push(`docFindByField result: ${JSON.stringify(findByIdResult, null, 2)}`);
+
+                // 3. Test docQueryStartsWith
+                output.push('\n3. Testing docQueryStartsWith...');
+                console.log('Before docQueryStartsWith call');
+                const queryStartsWithResult = await docQueryStartsWith('doc.name', 'Test', 5);
+                console.log('After docQueryStartsWith call');
+                output.push(`docQueryStartsWith result: ${JSON.stringify(queryStartsWithResult, null, 2)}`);
+
+                // 4. Test docFindInRange
+                output.push('\n4. Testing docFindInRange...');
+                const findInRangeResult = await docFindInRange('doc.size', 0, 1000, 5);
+                output.push(`docFindInRange result: ${JSON.stringify(findInRangeResult, null, 2)}`);
+
+                // 5. Direct query using RxDB
+                output.push('\n5. Testing direct RxDB query...');
+                const directQueryResult = await metaCollection.find({
+                    selector: {
+                        'doc.name': { $regex: '^Test', $options: 'i' },
+                        _deleted: { $eq: false }
+                    }
+                }).exec();
+                output.push(`Direct RxDB query result: ${JSON.stringify(directQueryResult.map(doc => doc.toJSON()), null, 2)}`);
+
+            } catch (error) {
+                output.push(`\nError: ${error.message}\n\nStack: ${error.stack}`);
+            }
+
+            return output.join('\n');
+        }
+
+        window.runDebugQueries = async function() {
+            try {
+                const result = await debugQueries();
+                document.getElementById('output').textContent = result;
+            } catch (error) {
+                document.getElementById('output').textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+            }
+        };
+    </script>
+</body>
+</html>

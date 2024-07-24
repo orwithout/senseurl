@@ -5,16 +5,16 @@ import _ from 'lodash';
 
 const preprocessors = {
   strArray: (value) => _.isString(value) ? _(value).split(',').map(_.trim).filter(Boolean).value() : (_.isArray(value) ? value.filter(Boolean) : []),
-  description: (value) => _.isString(value) ? _.trim(value) : '',
-  parent: (value, data) => {
-    if (value !== undefined && value !== null && value !== '') {
-      return value;
-    }
-    if (!data.id) return '';
-    const parts = data.id.split('/');
-    parts.pop();
-    return parts.join('/') || '#';
-  }
+  description: (value) => _.isString(value) ? _.trim(value) : ''
+  // parent: (value, data) => {
+  //   if (value !== undefined && value !== null && value !== '') {
+  //     return value;
+  //   }
+  //   if (!data.id) return '';
+  //   const parts = data.id.split('/');
+  //   parts.pop();
+  //   return parts.join('/') || '#';
+  // }
 };
 
 class AjvValidator {

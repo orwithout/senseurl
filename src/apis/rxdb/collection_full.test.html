@@ -43,7 +43,7 @@
     };
 
   function genRanStr(length) {
-      const base64Chars = 'AC#/';
+      const base64Chars = 'ABC';
       let randomString = '';
       for (let i = 0; i < length; i++) {
           const randomIndex = Math.floor(Math.random() * base64Chars.length);
@@ -54,8 +54,8 @@
     // Function to generate sample data
     function generateSampleData() {
       return {
-        id: "#/a/b",
-        parent: '',
+        id: `${genRanStr(2)}`,
+        parent: `${genRanStr(2)}`,
         doc: {
           id: uuidv4(),
           type: 'text/plain',

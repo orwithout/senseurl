@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test doc_io_write</title>
+</head>
+<body>
+    <h1>Test doc_io_write (Check Console)</h1>
+    <button onclick="testDocAdd()">Test docAdd</button>
+    <button onclick="testDocAdd2()">Test docAdd2</button>
+    <button onclick="testDocUpdate()">Test docUpdate</button>
+
+    <script type="module">
+        import { docAdd, docUpdate } from './doc_io_write.js';
+        import { v4 as uuidv4 } from 'https://jspm.dev/uuid';
+
+        window.testDocAdd = async function() {
+            try {
+                const newDoc = {
+                    id: "7acf770f-b881-4f9f-ba39-bb03bd2c7e64",
+                    parent: '#',
+                    doc: {
+                        id: "7acf770f-b881-4f9f-ba39-bb03bd2c7e65",
+                        cid: `cid_${uuidv4()}`,
+                        type: 'text/plain',
+                        name: 'Test Document',
+                        content: 'This is a test document.'
+                    }
+                };
+                const result = await docAdd(newDoc);
+                console.log('Document added:', result);
+            } catch (error) {
+                console.error('Error in docAdd:', error);
+            }
+        };
+        window.testDocAdd2 = async function() {
+            try {
+                const newDoc = {
+                    id: uuidv4(),
+                    parent: '#',
+                    doc: {
+                        id: uuidv4(),
+                        cid: `cid_${uuidv4()}`,
+                        type: 'text/plain',
+                        name: 'Test Document',
+                        content: 'This is a test document.'
+                    }
+                };
+                const result = await docAdd(newDoc);
+                console.log('Document added:', result);
+            } catch (error) {
+                console.error('Error in docAdd:', error);
+            }
+        };
+        window.testDocUpdate = async function() {
+            try {
+                // 假设我们知道一个已存在的文档ID
+                const existingDocId = '7acf770f-b881-4f9f-ba39-bb03bd2c7e64';
+                const updateData = {
+                    id: existingDocId,
+                    doc: {
+                        name: 'Updated Test Document',
+                        content: 'This document has been updated.'
+                    }
+                };
+                const result = await docUpdate(updateData);
+                console.log('Document updated:', result);
+            } catch (error) {
+                console.error('Error in docUpdate:', error);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -14,7 +14,7 @@ let _db;
 async function getRxDb() {
   if (!_db) {
     _db = await createRxDatabase({
-      name: 'runic_db',
+      name: 'wjw_net',
       storage: getRxStorageDexie(),
       strictMode: true
     });
