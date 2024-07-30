@@ -23,7 +23,7 @@
     import { getDocsEasyIo } from './collections_easy_io.js';
     import _ from 'lodash';
 
-    const docsEasyIo = await getDocsEasyIo('collection_full');
+    const docsEasyIo = await getDocsEasyIo('doc_meta');
 
     function uuidv4() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -44,7 +44,7 @@
     function generateSampleDoc() {
       return {
         id: uuidv4(),
-        path: `${genRanStr(3)}`,
+        parent: `${genRanStr(3)}`,
         doc: {
           id: uuidv4(),
           type: 'text/plain',
@@ -80,7 +80,7 @@
     // Validate entire document
     document.getElementById('validateDocBtn').addEventListener('click', async () => {
       const sampleDoc = generateSampleDoc();
-      const validationResult = await docsEasyIo.validateFull(sampleDoc);
+      const validationResult = await docsEasyIo.validateFullMeta(sampleDoc);
       console.log(`Document validation: ${validationResult.valid ? 'Success' : 'Failed'} - ${JSON.stringify(validationResult.errors)}`);
     });
 

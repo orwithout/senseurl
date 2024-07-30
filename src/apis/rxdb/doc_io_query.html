@@ -13,45 +13,38 @@
     <button onclick="testFindInRange()">Test findInRange</button>
 
     <script type="module">
-        import { docQueryStartsWith, docFindByField, docFindInRange } from './doc_io_query.js';
-        
-        window.testGetDocById = async function() {
-            try {
-                const results = await docFindByField('id', '9ada5030-92fc-40bc-a47a-4475d269e895', 5);
-                console.log('findByField results:', results);
-            } catch (error) {
-                console.error('Error in findByField:', error);
+        import DocIoQuery from './doc_io_query.js';
+        const docIoQuery = new DocIoQuery();
+        // 初始化函数
+        async function initDocIoQuery() {
+            if (!docIoQuery.metaCollection) {
+                await docIoQuery.init();
             }
+        }
+
+        window.testGetDocById = async function() {
+            await initDocIoQuery();
+            const results = await docIoQuery.findByField('id', '9ada5030-92fc-40bc-a47a-4475d269e895', 5);
+            console.log('findByField results:', results);
         };
 
         window.testQueryStartsWith = async function() {
-            try {
-                const results = await docQueryStartsWith('id', '9ada5030', 5);
-                console.log('queryStartsWith results:', results);
-            } catch (error) {
-                console.error('Error in queryStartsWith:', error);
-            }
+            await initDocIoQuery();
+            const results = await docIoQuery.queryStartsWith('doc.name', 'Test', 5);
+            console.log('queryStartsWith results:', results);
         };
 
         window.testFindByField = async function() {
-            try {
-                const results = await docFindByField('doc.type', 'text/plain', 5);
-                console.log('findByField results:', results);
-            } catch (error) {
-                console.error('Error in findByField:', error);
-            }
+            await initDocIoQuery();
+            const results = await docIoQuery.findByField('doc.type', 'text/plain', 5);
+            console.log('findByField results:', results);
         };
 
         window.testFindInRange = async function() {
-            try {
-                const results = await docFindInRange('doc.size', 0, 1000, 5);
-                console.log('findInRange results:', results);
-            } catch (error) {
-                console.error('Error in findInRange:', error);
-            }
+            await initDocIoQuery();
+            const results = await docIoQuery.findInRange('doc.size', 0, 1000, 5);
+            console.log('findInRange results:', results);
         };
-
-
     </script>
 </body>
 </html>

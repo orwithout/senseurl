@@ -2,7 +2,7 @@
 import _ from 'lodash';
 
 class DocsEasyIo {
-  constructor(moduleName = 'collection_full') {
+  constructor(moduleName = 'doc_meta') {
     this.moduleName = moduleName;
     this.subscriptions = new WeakMap();
     this.debouncedUnsubscribe = _.debounce(this.unsubscribe.bind(this), 30000);
@@ -10,10 +10,10 @@ class DocsEasyIo {
   }
 
   async init() {
-    const modules = import.meta.glob('./collection_*.js');
-    const {getCollection, validateFull, validateField, validatePartial, docSchema,syncFromFullCollection} = await modules[`./${this.moduleName}.js`]();
-    Object.assign(this, {validateFull, validateField, validatePartial, docSchema,syncFromFullCollection});
-    this.collection = await getCollection();
+    const modules = import.meta.glob('./doc_*.js');
+    const {getMetaCollection, validateFullMeta, validateMetaField, validatePartialMeta, metaSchema} = await modules[`./${this.moduleName}.js`]();
+    Object.assign(this, {validateFullMeta, validateMetaField, validatePartialMeta, metaSchema});
+    this.collection = await getMetaCollection();
   }
   
   getParentPath(id) {
@@ -22,7 +22,7 @@ class DocsEasyIo {
     return parts.join('/') || '#'; // 如果是根节点，返回 '#'
   }
   async add(docData) {
-    const validationResult = await this.validateFull(docData);
+    const validationResult = await this.validateFullMeta(docData);
     if (!validationResult.valid) {
       console.error('Validation failed:', validationResult.errors);
       throw new Error('Validation failed');
@@ -42,7 +42,7 @@ class DocsEasyIo {
     }
 
     const newData = { ...doc.toJSON(), ...updateData };
-    const validationResult = await this.validateFull(newData);
+    const validationResult = await this.validateFullMeta(newData);
     if (!validationResult.valid) {
       console.error('Validation failed:', validationResult.errors);
       throw new Error('Validation failed');
