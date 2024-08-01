@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test doc_io_write</title>
+    <title>测试 DocIoWrite</title>
 </head>
 <body>
-    <h1>Test doc_io_write (Check Console)</h1>
-    <button onclick="testDocAdd()">Test docAdd</button>
-    <button onclick="testDocAdd2()">Test docAdd2</button>
-    <button onclick="testDocUpdate()">Test docUpdate</button>
+    <h1>测试 DocIoWrite (请查看控制台)</h1>
+    <button onclick="testDocAdd()">测试 docAdd</button>
+    <button onclick="testDocAdd2()">测试 docAdd2</button>
+    <button onclick="testDocUpdate()">测试 docUpdate</button>
 
     <script type="module">
-        import { docAdd, docUpdate } from './doc_io_write.js';
+        import DocIoWrite from './doc_io_write.js';
         import { v4 as uuidv4 } from 'https://jspm.dev/uuid';
+
+        const docIoWrite = new DocIoWrite();
+        await docIoWrite.init();
 
         window.testDocAdd = async function() {
             try {
@@ -28,12 +31,13 @@
                         content: 'This is a test document.'
                     }
                 };
-                const result = await docAdd(newDoc);
-                console.log('Document added:', result);
+                const result = await docIoWrite.docAdd(newDoc);
+                console.log('文档已添加:', result);
             } catch (error) {
-                console.error('Error in docAdd:', error);
+                console.error('docAdd 出错:', error);
             }
         };
+
         window.testDocAdd2 = async function() {
             try {
                 const newDoc = {
@@ -47,12 +51,13 @@
                         content: 'This is a test document.'
                     }
                 };
-                const result = await docAdd(newDoc);
-                console.log('Document added:', result);
+                const result = await docIoWrite.docAdd(newDoc);
+                console.log('文档已添加:', result);
             } catch (error) {
-                console.error('Error in docAdd:', error);
+                console.error('docAdd 出错:', error);
             }
         };
+
         window.testDocUpdate = async function() {
             try {
                 // 假设我们知道一个已存在的文档ID
@@ -64,10 +69,10 @@
                         content: 'This document has been updated.'
                     }
                 };
-                const result = await docUpdate(updateData);
-                console.log('Document updated:', result);
+                const result = await docIoWrite.docUpdate(updateData);
+                console.log('文档已更新:', result);
             } catch (error) {
-                console.error('Error in docUpdate:', error);
+                console.error('docUpdate 出错:', error);
             }
         };
     </script>

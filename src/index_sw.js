@@ -3,7 +3,6 @@ import { LitElement, html, css } from 'lit';
 
 class HeliaControl extends LitElement {
 
-
   render() {
     return html`
       <button @click="${this.registerServiceWorker}">Register Service Worker</button>
@@ -57,7 +56,7 @@ class HeliaControl extends LitElement {
         console.log("Connected Peers:", data.connectedPeers); // Log the number of currently connected peers
       })
       .catch(error => console.error('Error fetching status:', error)); // Add error handling for the fetch operation
-}
+  }
 
 }
 
