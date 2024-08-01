@@ -1,5 +1,5 @@
 // src\helia\service_worker.js
-import { instantiateHeliaNode } from './service_worker_helia_instantiate.js';
+import { instantiateHeliaNode } from './sw_instantiate.js';
 
 
 self.addEventListener('activate', event => {

@@ -27,7 +27,6 @@ const docSchema = {
         id:{type:'string',maxLength:36,description:'UUID v4'},
         type:{type:'string',maxLength:64,description:'Like,Create,Folder'},
         mediaType:{type:'string',maxLength:64,description:'MIME Type: inode/directory,text/wjw.net,text/bookmark,app/docx,link/docx,image/jpeg'},
-        cid:{type:'string',maxLength:128},
 
         name:{type:'string',maxLength:64},
         preferredUsername:{type:'string',maxLength:64},
@@ -67,7 +66,7 @@ const docSchema = {
     }
   },
   required:['id','parent'],
-  indexes:['parent','doc.id','doc.type','doc.cid','doc.name','doc.actor','doc.attributedTo','doc.profile','doc.size','doc.published','doc.updated','doc.accessed']
+  indexes:['parent','doc.id','doc.type','doc.name','doc.actor','doc.attributedTo','doc.profile','doc.size','doc.published','doc.updated','doc.accessed']
 };
 
 

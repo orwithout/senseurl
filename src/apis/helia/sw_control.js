@@ -16,7 +16,7 @@ class HeliaControl extends LitElement {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service_worker.js', { type: 'module' })
+      navigator.serviceWorker.register('./sw_io.js', { type: 'module' })
         .then(() => {
           console.log('Service Worker registered');
         })

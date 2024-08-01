@@ -1,3 +1,4 @@
+// src\apis\helia\sw_instantiate.js
 import { IDBBlockstore } from 'blockstore-idb';
 import { IDBDatastore } from 'datastore-idb';
 import { createHelia } from 'helia';
