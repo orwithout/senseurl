@@ -5,7 +5,7 @@ import { createHelia } from 'helia';
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { mplex } from '@libp2p/mplex'
 import { noise } from '@chainsafe/libp2p-noise'
-
+import { unixfs } from '@helia/unixfs'
 
 export const instantiateHeliaNode = async () => {
   const datastore = new IDBDatastore('/datastore2');
@@ -44,6 +44,8 @@ export const instantiateHeliaNode = async () => {
     datastore: datastore,
     blockstore: blockstore
   });
+
+  heliaInstance.unixfs = unixfs(heliaInstance)
 
   return heliaInstance;
 };

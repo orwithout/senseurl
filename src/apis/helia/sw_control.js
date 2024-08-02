@@ -1,4 +1,4 @@
-// src\helia\helia_control.js
+// src\apis\helia\sw_control.js
 import { LitElement, html, css } from 'lit';
 
 class HeliaControl extends LitElement {
