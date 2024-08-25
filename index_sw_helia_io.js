@@ -1,5 +1,6 @@
 // index_sw_helia_io.js
 import { instantiateHeliaNode } from '/src/apis/helia/sw_instantiate.js';
+import { CID } from 'multiformats/cid'
 
 self.addEventListener('activate', event => {
     event.waitUntil(
@@ -8,10 +9,6 @@ self.addEventListener('activate', event => {
       })
     );
 });
-
-
-
-
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -35,10 +32,6 @@ self.addEventListener('fetch', event => {
   }
 });
 
-
-
-
-
 async function handleStart() {
   if (!self.helia) {
       self.helia = await instantiateHeliaNode();
@@ -48,12 +41,8 @@ async function handleStart() {
   });
 }
 
-
-
-
-
 async function handleStop() {
-  console.log('Stop request received'); // 调试输出
+  console.log('Stop request received');
   if (self.helia) {
       await self.helia.stop();
       self.helia = null;
@@ -63,16 +52,10 @@ async function handleStop() {
   });
 }
 
-
-
-
-
 async function handleStatus() {
-  // Check if the Helia node is initialized
   const status = self.helia ? self.helia.libp2p.status : 'Helia Node not initialized';
   // Retrieve all peers from the peerStore
   const peers = await self.helia.libp2p.peerStore.all();
-  // Build the response object with detailed node status
   const responseContent = {
       nodeStatus: status,  // Node initialization status
       totalPeers: peers.length,  // Total number of peers in the store
@@ -83,9 +66,6 @@ async function handleStatus() {
       headers: { 'Content-Type': 'application/json' }
   });
 }
-
-
-
 
 async function handleAddFile(request) {
   if (!self.helia) {
@@ -107,21 +87,39 @@ async function handleAddFile(request) {
     const content = await file.arrayBuffer();
     console.log('文件已转换为ArrayBuffer');
     
-    // 使用 unixfs.addBytes 来添加文件
     const cid = await self.helia.unixfs.addBytes(new Uint8Array(content), {
       rawLeaves: true
     });
     
     console.log('文件已添加到Helia:', cid.toString());
     
-    // 固定（pin）添加的文件
-    for await (const pinnedCid of self.helia.pins.add(cid)) {
+    // 固定文件，并添加元数据
+    const metadata = {
+      addedAt: new Date().toISOString(),
+      fileName: file.name,
+      fileSize: file.size  // 存储准确的文件大小
+    };
+    for await (const pinnedCid of self.helia.pins.add(cid, { metadata })) {
       console.log('文件已固定:', pinnedCid.toString());
     }
     
+    // 检查文件是否被固定
+    const isPinned = await self.helia.pins.isPinned(cid);
+    console.log('文件是否被固定:', isPinned);
+
+    // 获取 pin 信息
+    let pinInfo;
+    for await (const pin of self.helia.pins.ls({ cid })) {
+      pinInfo = pin;
+      break;
+    }
+
     return new Response(JSON.stringify({
       cid: cid.toString(),
-      size: file.size
+      size: file.size,
+      pinned: isPinned,
+      pinDepth: pinInfo ? pinInfo.depth : undefined,
+      pinMetadata: pinInfo ? pinInfo.metadata : undefined
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -134,8 +132,6 @@ async function handleAddFile(request) {
   }
 }
 
-
-// 处理文件获取请求
 async function handleGetFile(request) {
   if (!self.helia) {
     return new Response(JSON.stringify({ error: 'Helia 节点未初始化' }), {
@@ -169,14 +165,8 @@ async function handleGetFile(request) {
   }
 }
 
-
-
-
-
-// 处理文件元信息获取请求
 async function handleGetFileInfo(request) {
   if (!self.helia) {
-    console.error('Helia 节点未初始化');
     return new Response(JSON.stringify({ error: 'Helia 节点未初始化' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -185,45 +175,20 @@ async function handleGetFileInfo(request) {
   const url = new URL(request.url);
   const cidString = url.searchParams.get('cid');
   if (!cidString) {
-    console.error('未提供 CID');
     return new Response(JSON.stringify({ error: '未提供 CID' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
   try {
-    console.log('Attempting to get file info for CID:', cidString);
-    
-    // 使用 unixfs.cat 方法读取文件内容
-    let content = new Uint8Array(0);
-    for await (const chunk of self.helia.unixfs.cat(cidString)) {
-      const newContent = new Uint8Array(content.length + chunk.length);
-      newContent.set(content);
-      newContent.set(chunk, content.length);
-      content = newContent;
+    const fileDetails = await getFileDetails(cidString);
+    if (!fileDetails) {
+      return new Response(JSON.stringify({ error: '获取文件信息失败' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-
-    console.log('File content read, size:', content.length);
-
-    // 尝试获取更多信息
-    let additionalInfo = {};
-    if (self.helia.dag && typeof self.helia.dag.get === 'function') {
-      try {
-        const dagNode = await self.helia.dag.get(cidString);
-        additionalInfo.links = dagNode.Links ? dagNode.Links.length : 0;
-        additionalInfo.data = dagNode.Data ? 'present' : 'not present';
-      } catch (dagError) {
-        console.warn('Error getting DAG info:', dagError);
-      }
-    } else {
-      console.warn('self.helia.dag.get is not available');
-    }
-
-    return new Response(JSON.stringify({
-      cid: cidString,
-      size: content.length,
-      ...additionalInfo
-    }), {
+    return new Response(JSON.stringify(fileDetails), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
@@ -235,11 +200,8 @@ async function handleGetFileInfo(request) {
   }
 }
 
-
-
 async function handleListFiles(request) {
   if (!self.helia) {
-    console.error('Helia节点未初始化');
     return new Response(JSON.stringify({ error: 'Helia节点未初始化' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -248,44 +210,41 @@ async function handleListFiles(request) {
   try {
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit')) || 50;
+    const offset = parseInt(url.searchParams.get('offset')) || 0;
 
-    console.log('尝试列出文件，限制数量:', limit);
-    console.log('Helia对象:', self.helia);
+    console.log('尝试列出文件，限制数量:', limit, '偏移量:', offset);
 
     const files = [];
-    let isEmpty = true;
-
-    // 使用 pins.ls 来获取所有固定的文件
+    let count = 0;
     for await (const pin of self.helia.pins.ls()) {
-      isEmpty = false;
-      try {
-        console.log('找到固定的CID:', pin.cid.toString());
-        
-        // 使用 unixfs.stat 获取文件信息
-        const stat = await self.helia.unixfs.stat(pin.cid);
-        console.log('文件信息:', stat);
-        
-        files.push({
-          cid: pin.cid.toString(),
-          size: stat.size,
-          type: stat.type
-        });
-
-        if (files.length >= limit) break;
-      } catch (error) {
-        console.warn('获取文件信息时出错:', pin.cid.toString(), error);
+      if (count >= offset + limit) break;
+      if (count >= offset) {
+        try {
+          const fileDetails = await getFileDetails(pin.cid);
+          if (fileDetails) {
+            files.push(fileDetails);
+          }
+        } catch (error) {
+          console.warn('获取文件信息时出错:', pin.cid.toString(), error);
+        }
       }
+      count++;
     }
 
-    if (isEmpty) {
-      console.log('没有找到固定的文件');
+    if (files.length === 0) {
+      console.log('没有找到文件');
       return new Response(JSON.stringify({ message: '没有找到文件' }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
     console.log('文件列表成功:', files);
-    return new Response(JSON.stringify(files), {
+    return new Response(JSON.stringify({
+      files: files,
+      total: count,
+      limit: limit,
+      offset: offset
+    }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
@@ -294,5 +253,72 @@ async function handleListFiles(request) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+}
+
+
+async function getFileDetails(cid) {
+  try {
+    let cidObj;
+    if (typeof cid === 'string') {
+      cidObj = CID.parse(cid);
+    } else if (cid instanceof CID) {
+      cidObj = cid;
+    } else if (typeof cid === 'object' && cid.toString) {
+      // 假设这是 Helia 返回的 CID 对象
+      cidObj = CID.parse(cid.toString());
+    } else {
+      throw new Error('Invalid CID format');
+    }
+
+    // 获取文件状态
+    const stat = await self.helia.unixfs.stat(cidObj);
+
+    // 检查文件是否被固定
+    const isPinned = await self.helia.pins.isPinned(cidObj);
+
+    // 获取 pin 信息
+    let pinInfo = null;
+    if (isPinned) {
+      for await (const pin of self.helia.pins.ls({ cid: cidObj })) {
+        pinInfo = pin;
+        break;  // 我们只需要第一个匹配的 pin
+      }
+    }
+
+    // 获取块信息
+    const block = await self.helia.blockstore.get(cidObj);
+
+    // 构建文件详情对象
+    let fileSize = 0;
+  if (pinInfo && pinInfo.metadata && pinInfo.metadata.fileSize) {
+    fileSize = pinInfo.metadata.fileSize;
+  } else {
+    // 如果元数据中没有文件大小，则使用之前的方法计算
+    if (stat.type === 'file') {
+      for await (const chunk of self.helia.unixfs.cat(cidObj)) {
+        fileSize += chunk.length;
+      }
+    } else {
+      fileSize = stat.size;
+    }
+  }
+
+  const fileDetails = {
+    cid: cidObj.toString(),
+    size: fileSize,
+    type: stat.type,
+    blocks: stat.blocks,
+    pinned: isPinned,
+    pinDepth: pinInfo ? pinInfo.depth : undefined,
+    pinMetadata: pinInfo ? pinInfo.metadata : undefined
+  };
+
+    console.log('File details:', fileDetails);
+    return fileDetails;
+
+  } catch (error) {
+    console.error('Error getting file details:', error);
+    return null;
   }
 }

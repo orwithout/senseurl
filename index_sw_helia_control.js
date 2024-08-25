@@ -1,16 +1,29 @@
-// index_sw_helia_control.js
 import { LitElement, html, css } from 'lit';
 
 class HeliaControl extends LitElement {
-  static styles = css`
-    button {
-      margin: 5px;
-      padding: 10px;
-    }
-    input[type="file"] {
-      margin: 5px;
-    }
-  `;
+  // static styles = css`
+  //   button {
+  //     margin: 5px;
+  //     padding: 10px;
+  //   }
+  //   input[type="file"], input[type="text"] {
+  //     margin: 5px;
+  //   }
+  //   .file-info {
+  //     margin-top: 10px;
+  //     border: 1px solid #ddd;
+  //     padding: 10px;
+  //   }
+  //   .file-list {
+  //     margin-top: 10px;
+  //     max-height: 300px;
+  //     overflow-y: auto;
+  //   }
+  //   .file-item {
+  //     border-bottom: 1px solid #eee;
+  //     padding: 5px 0;
+  //   }
+  // `;
 
   render() {
     return html`
@@ -27,6 +40,8 @@ class HeliaControl extends LitElement {
       <button @click="${this.getFile}">获取文件</button>
       <button @click="${this.getFileInfo}">获取文件信息</button>
       <button @click="${this.listFiles}">列出文件</button>
+      <div id="fileInfo" class="file-info"></div>
+      <div id="fileList" class="file-list"></div>
     `;
   }
 
@@ -145,50 +160,62 @@ class HeliaControl extends LitElement {
     }
   
     fetch(`/index_sw_helia_io/v0/file-info?cid=${cid}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
+      .then(response => response.json())
       .then(data => {
-        console.log('文件信息响应:', data);
         if (data.error) {
           throw new Error(data.error);
         }
+        console.log('文件信息:', data);
+        const fileInfoDiv = this.shadowRoot.querySelector('#fileInfo');
+        fileInfoDiv.innerHTML = `
+          <h3>文件信息</h3>
+          <p>CID: ${data.cid}</p>
+          <p>大小: ${data.size} 字节</p>
+          <p>类型: ${data.type}</p>
+          <p>块数: ${data.blocks}</p>
+          <p>已Pin: ${data.pinned ? '是' : '否'}</p>
+          ${data.pinned ? `<p>Pin深度: ${data.pinDepth}</p>` : ''}
+          ${data.pinMetadata ? `<p>Pin元数据: ${JSON.stringify(data.pinMetadata)}</p>` : ''}
+        `;
       })
       .catch(err => {
         console.error('获取文件信息失败', err);
+        const fileInfoDiv = this.shadowRoot.querySelector('#fileInfo');
+        fileInfoDiv.innerHTML = `<p>错误: ${err.message}</p>`;
       });
   }
 
   listFiles() {
-    const limit = 50; // 你可以让这个值可配置
-  
-    fetch(`/index_sw_helia_io/v0/list-files?limit=${limit}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
+    fetch('/index_sw_helia_io/v0/list-files?limit=50&offset=0')
+      .then(response => response.json())
       .then(data => {
-        console.log('文件列表:', data);
-        if (data.message === '根目录为空') {
-          console.log('根目录为空，没有文件可以列出。');
-        } else if (Array.isArray(data)) {
-          let fileList = data.map(file => 
-            `CID: ${file.cid}, 名称: ${file.name}, 大小: ${file.size} 字节, 类型: ${file.type}`
-          ).join('\n');
-          console.log('文件列表:\n' + fileList);
+        const fileListDiv = this.shadowRoot.querySelector('#fileList');
+        if (data.files && data.files.length > 0) {
+          const fileListHTML = data.files.map(file => `
+            <div class="file-item">
+              <p>CID: ${file.cid}</p>
+              <p>大小: ${file.size} 字节</p>
+              <p>类型: ${file.type}</p>
+              <p>已Pin: ${file.pinned ? '是' : '否'}</p>
+              ${file.pinned ? `<p>Pin深度: ${file.pinDepth}</p>` : ''}
+            </div>
+          `).join('');
+          fileListDiv.innerHTML = `
+            <h3>文件列表 (总数: ${data.total})</h3>
+            ${fileListHTML}
+          `;
         } else {
-          console.log('获取文件列表失败: 意外的响应格式');
+          fileListDiv.innerHTML = '<p>没有找到文件</p>';
         }
       })
       .catch(err => {
         console.error('获取文件列表失败', err);
+        const fileListDiv = this.shadowRoot.querySelector('#fileList');
+        fileListDiv.innerHTML = `<p>错误: ${err.message}</p>`;
       });
   }
+
+  // ... 其他方法保持不变 ...
 }
 
 customElements.define('helia-control', HeliaControl);
